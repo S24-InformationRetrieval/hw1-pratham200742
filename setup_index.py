@@ -1,15 +1,13 @@
 import os
 from os.path import dirname, join
 from nltk.tokenize import word_tokenize
-from nltk.stem import PorterStemmer
+from nltk import PorterStemmer
 import re
 import string
 from elasticsearch import Elasticsearch
 
-current_dir = dirname(__file__)
-
-doc_folder = join(current_dir, 'AP_DATA/ap89_collection')
-sw_path = join(current_dir, 'AP_DATA/stoplist.txt')
+doc_folder = './IR_data/AP_DATA/ap89_collection'
+sw_path = './IR_data/AP_DATA/stoplist.txt'
 
 textMap = {}
 ps = PorterStemmer()
@@ -18,6 +16,8 @@ sw_list = []
 pattern = re.compile(r"<DOC>(.*?)</DOC>", re.DOTALL)
 
 es = Elasticsearch("http://localhost:9200")
+
+print(es.ping())
 
 def stem_text(text):
     stemmed = []
@@ -49,22 +49,23 @@ for file_name in os.listdir(doc_folder):
     if file_name != 'readme':
         file_path = os.path.join(doc_folder, file_name)
         parse_file(file_path)
+        print ("Parsed file")
 
 print('Parsing Completed')
 
 
-index_name = "ap89_data0"
+index_name = "ap89_data"
 configurations = {
-    "settings": {
+    "settings" : {
         "number_of_shards": 1,
         "number_of_replicas": 1,
         "analysis": {
             "filter": {
                 "english_stop": {
                     "type": "stop",
-                    "stopwords_path": "stoplist.txt"
+                    "stopwords_path": "my_stoplist.txt"
                 }
-            }, 
+            },
             "analyzer": {
                 "stopped": {
                     "type": "custom",
@@ -75,7 +76,7 @@ configurations = {
                     ]
                 }
             }
-        }
+      }
     },
     "mappings": {
         "properties": {
@@ -94,7 +95,7 @@ es.indices.create(index = index_name, body = configurations)
 def add_data(_id, text):
     es.index(
         index = index_name,
-        document = {
+        body = {
             'content': text
         },
         id = _id)
