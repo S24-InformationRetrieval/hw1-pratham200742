@@ -34,8 +34,9 @@ def parse_file(file_path):
         docs = pattern.findall(file.read())
         for content in docs:
             docNo = re.search(r'<DOCNO>(.*?)</DOCNO>', content, re.DOTALL).group(1).strip()
-            text = re.search(r'<TEXT>(.*?)</TEXT>', content, re.DOTALL).group(1).strip()
+            text_blocks = re.findall(r'<TEXT>(.*?)</TEXT>', content, re.DOTALL)
 
+            text = " ".join(text_blocks).strip()
             stemmed_text = stem_text(text)
             textMap[docNo] = stemmed_text
 
@@ -54,7 +55,7 @@ for file_name in os.listdir(doc_folder):
 print('Parsing Completed')
 
 
-index_name = "ap89_data"
+index_name = "ap89_data0"
 configurations = {
     "settings" : {
         "number_of_shards": 1,
