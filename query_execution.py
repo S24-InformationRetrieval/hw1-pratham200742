@@ -103,4 +103,4 @@ print(len(result_scores[0]))
 with open("output_es_built_in.txt", "w") as output_file:
     for query, results in result_scores.items():
         for rank, (doc_id, rank, score) in enumerate(results, start=1):
-            output_file.write(f"{(query_list[query])[:2]} Q0 {doc_id} {rank} {score} Exp\n")
+            output_file.write(f"{(query_list[query]).split('.')[0]} Q0 {doc_id} {rank} {score} Exp\n")
