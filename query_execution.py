@@ -22,13 +22,13 @@ def query_analyzer(query):
         "filter": ["porter_stem", "lowercase", "english_stop"],
         "text": query
     }
-    res = ic.analyze(body = body, index = "ap89_data")
+    res = ic.analyze(body = body, index = "ap89_data0")
     return [list["token"] for list in res["tokens"] if list["token"] not in sw_list]
 
 
 def query_search(query):
     res = es.search(
-        index = "ap89_data",
+        index = "ap89_data0",
         body = {
             "size": 1000,
             "query": {
