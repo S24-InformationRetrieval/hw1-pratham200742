@@ -1,3 +1,4 @@
+# %%
 from elasticsearch import Elasticsearch, helpers
 from elasticsearch.client import IndicesClient
 import os
@@ -5,8 +6,10 @@ import json
 import requests
 import re
 import math
+import numpy as np
 from operator import getitem
 
+# %%
 es = Elasticsearch(timeout = 300)
 ic = IndicesClient(es)
 
@@ -106,15 +109,14 @@ num_docs = len(doc_ids)
 
 print(num_docs)
 
-retrieve_term_doc_info() 
+retrieve_term_doc_info()
 
 avg_doc_length = sum([doc_length[d] for d in doc_ids]) / num_docs
 total_doc_length = sum([doc_length[d] for d in doc_length])
 vocab_size = len(unique_words)
 
-print("avg doc length: " + str(avg_doc_length))
-print("total doc length: " + str(total_doc_length))
-print("vocab size: " + str(vocab_size))
+# %%
+print(len(doc_length[84400]))
 
 def df(w):
     if w in term_doc_freq:
@@ -152,7 +154,7 @@ with open(query_path, 'r') as file:
 
 print("opened query file")
 
-
+# %%
 # Elastic Search Retrieval Method
 def ES_Search(query_list):
     scores = {}
@@ -194,6 +196,7 @@ with open("output_es_built_in.txt", "w") as output_file:
             output_file.write(f"{(query_list[query]).split('.')[0]} Q0 {doc_id} {rank} {score} Exp\n")
 
 
+# %%
 # Okapi TF Retrieval Model
 def okapi_TF(query_list):
     scores = {}
@@ -205,7 +208,7 @@ def okapi_TF(query_list):
 
         for doc in doc_ids:
             score = sum([(tf(w, doc) / (tf(w, doc) + 0.5 + (1.5 * (doc_length[doc] / avg_doc_length)))) for w in processed_query])
-            scores[query].append((doc_id, score))
+            scores[query].append((doc, score))
         
         scores[query] = sorted(scores[query], key = lambda x: x[1], reverse = True)[:1000]
     
@@ -216,6 +219,34 @@ print("Found top 1000 docs for all queries using Okapi TF")
 
 with open("output_okapi_tf.txt", "w") as output_file:
     for query in range(len(result_scores_okapi_tf)):
-        for doc in range(len(query)):
-            doc_score = result_scores_okapi_tf[doc]
+        for doc in range(len(result_scores_okapi_tf[query])):
+            doc_score = (result_scores_okapi_tf[query])[doc]
+            output_file.write(f"{(query_list[query]).split('.')[0]} Q0 {doc_score[0]} {doc + 1} {doc_score[1]} Exp\n")
+
+
+# TF-IDF Retrieval Model
+def tf_idf(query_list):
+    scores = {}
+    for query in range(len(query_list)):
+        processed_query = query_analyzer(query_list[query])
+
+        if query not in scores:
+            scores[query] = []
+
+        for doc in doc_ids:
+            score = sum([((tf(w, doc) / (tf(w, doc) + 0.5 + (1.5 * (doc_length[doc] / avg_doc_length)))) * (np.log10(num_docs / df(w)))) 
+                         for w in processed_query if df(w) > 0])
+            scores[query].append((doc, score))
+        
+        scores[query] = sorted(scores[query], key = lambda x: x[1], reverse = True)[:1000]
+    
+    return scores
+
+result_scores_tf_idf = tf_idf(query_list)
+print("Found top 1000 docs for all queries using TF-IDF")
+
+with open("output_tf_idf.txt", "w") as output_file:
+    for query in range(len(result_scores_tf_idf)):
+        for doc in range(len(result_scores_tf_idf[query])):
+            doc_score = (result_scores_tf_idf[query])[doc]
             output_file.write(f"{(query_list[query]).split('.')[0]} Q0 {doc_score[0]} {doc + 1} {doc_score[1]} Exp\n")
