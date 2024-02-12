@@ -1,4 +1,3 @@
-# %%
 from elasticsearch import Elasticsearch, helpers
 from elasticsearch.client import IndicesClient
 import os
@@ -9,7 +8,6 @@ import math
 import numpy as np
 from operator import getitem
 
-# %%
 es = Elasticsearch(timeout = 300)
 ic = IndicesClient(es)
 
@@ -115,9 +113,6 @@ avg_doc_length = sum([doc_length[d] for d in doc_ids]) / num_docs
 total_doc_length = sum([doc_length[d] for d in doc_length])
 vocab_size = len(unique_words)
 
-# %%
-print(len(doc_length[84400]))
-
 def df(w):
     if w in term_doc_freq:
         return term_doc_freq[w]
@@ -154,7 +149,7 @@ with open(query_path, 'r') as file:
 
 print("opened query file")
 
-# %%
+
 # Elastic Search Retrieval Method
 def ES_Search(query_list):
     scores = {}
@@ -196,7 +191,6 @@ with open("output_es_built_in.txt", "w") as output_file:
             output_file.write(f"{(query_list[query]).split('.')[0]} Q0 {doc_id} {rank} {score} Exp\n")
 
 
-# %%
 # Okapi TF Retrieval Model
 def okapi_TF(query_list):
     scores = {}
@@ -250,3 +244,49 @@ with open("output_tf_idf.txt", "w") as output_file:
         for doc in range(len(result_scores_tf_idf[query])):
             doc_score = (result_scores_tf_idf[query])[doc]
             output_file.write(f"{(query_list[query]).split('.')[0]} Q0 {doc_score[0]} {doc + 1} {doc_score[1]} Exp\n")
+
+
+# Okapi BM-25 Retrieval Model
+def bm_25(query_list):
+    scores = {}
+    for query in range(len(query_list)):
+        processed_query = query_analyzer(query_list[query])
+
+        if query not in scores:
+            scores[query] = []
+
+        for doc in doc_ids:
+            score = bm_25_score(doc, processed_query)
+            scores[query].append((doc, score))
+        
+        scores[query] = sorted(scores[query], key = lambda x: x[1], reverse = True)[:1000]
+    
+    return scores
+
+
+def bm_25_score(d, q):
+    k1 = 1.2
+    k2 = 500
+    b = 0.75
+    score = 0
+    
+    for w in q:
+        t1 = np.log10((num_docs + 0.5) / (0.5 + df(w)))
+        
+        t2 = (tf(w, d) +  k1 * tf(w,d)) / (tf(w,d) + k1 * ((1 - b) + b * (doc_length[d] / avg_doc_length)))
+        
+        t3 = (tf_q(w,q) + k2 * tf_q(w,q)) / (tf_q(w,q) + k2)
+        
+        score += (t1 * t2 * t3)
+    return score
+
+result_scores_bm_25 = bm_25(query_list)
+print("Found top 1000 docs for all queries using Okapi BM-25")
+
+with open("output_bm_25.txt", "w") as output_file:
+    for query in range(len(result_scores_bm_25)):
+        for doc in range(len(result_scores_bm_25[query])):
+            doc_score = (result_scores_bm_25[query])[doc]
+            output_file.write(f"{(query_list[query]).split('.')[0]} Q0 {doc_score[0]} {doc + 1} {doc_score[1]} Exp\n")
+
+print("done!")

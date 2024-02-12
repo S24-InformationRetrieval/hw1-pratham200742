@@ -55,7 +55,7 @@ for file_name in os.listdir(doc_folder):
 print('Parsing Completed')
 
 
-index_name = "ap89_data1"
+index_name = "ap89_data0"
 configurations = {
     "settings" : {
         "number_of_shards": 1,
